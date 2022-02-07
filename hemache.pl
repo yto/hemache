@@ -17,6 +17,7 @@ GetOptions(
     'db=s' => \$db_fn,
     'input=s' => \$input_fn,
     'D' => \$delete_on,
+    'label=s' => \$deleted_label,
     );
 
 my %dat;
@@ -98,13 +99,7 @@ sub add_one {
     }
 }
 
-# 途中にある DELETED を消す(ID1,ID2)。前後が同じだったら一つにする(ID2)。先頭はそのまま(ID3)。
-#BEFORE: ID1 20220129,105,1 20220128,[DELETED] 20211226,209,2 20211212,105,1
-#AFTER : ID1 20220129,105,1 20211226,209,2 20211212,105,1
-#BEFORE: ID2 20220129,660,7 20220128,[DELETED] 20220107,660,7 20211219,99,1
-#AFTER : ID2 20220107,660,7 20211219,99,1
-#BEFORE: ID3 20220128,[DELETED] 20211219,99,1
-#AFTER : ID3 20220128,[DELETED] 20211219,99,1
+# 途中にある DELETED を消す
 sub delete_deleted {
     my ($l_r) = @_;
     return $l_r if not grep {$_->[1] =~ /\Q$deleted_label\E/} @$l_r[1..$#$l_r];
