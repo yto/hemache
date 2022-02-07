@@ -1,3 +1,7 @@
+2022-02-07  YAMASHITA Tatsuo  <yto@example.com>
+
+	* hemache.pl: delete interval "deleted" nodes.
+
 2022-02-06  YAMASHITA Tatsuo  <yto@example.com>
 
 	* start

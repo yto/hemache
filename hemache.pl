@@ -6,15 +6,17 @@ use utf8;
 use open ":utf8";
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
-use Getopt::Long;
-$Getopt::Long::autoabbrev = 1;
+use Getopt::Long qw(:config no_ignore_case);
 $| = 1;
 
 my $db_fn = ""; # DB file name (for update mode)
 my $input_fn = ""; # latest log file name (for update mode)
+my $delete_on; # delete deleted nodes
+my $deleted_label = "[DELETED]";
 GetOptions(
     'db=s' => \$db_fn,
     'input=s' => \$input_fn,
+    'D' => \$delete_on,
     );
 
 my %dat;
@@ -33,7 +35,10 @@ foreach my $fni (sort {$a->{'ymdh'} <=> $b->{'ymdh'}} @log_file_list) {
     read_log_file_and_update_db(\%dat, $fni);
 }
 
-print join("\t", $_, map {join(",", @$_)} @{$dat{$_}{list}})."\n" for sort keys %dat;
+foreach my $id (sort keys %dat) {
+    my $l_r = $delete_on ? delete_deleted($dat{$id}{list}) : $dat{$id}{list};
+    print join("\t", $id, map {join(",", @$_)} @$l_r)."\n";
+}
 
 exit;
 
@@ -69,7 +74,7 @@ sub read_log_file_and_update_db {
     }
     close($fh);
     # ファイルから消えたIDの処理
-    add_one($dat_r->{$_}, [$fni->{"ymdh"}, "[DELETED]"]) for grep {!$seen{$_}} keys %$dat_r;
+    add_one($dat_r->{$_}, [$fni->{"ymdh"}, $deleted_label]) for grep {!$seen{$_}} keys %$dat_r;
 }
 
 sub open_file {
@@ -91,4 +96,25 @@ sub add_one {
     } elsif ($cont ne $d_r->{list}[0][1]) { # 前のと異なる場合は追加
 	unshift @{$d_r->{list}}, [$ymdh, $cont];
     }
+}
+
+# 途中にある DELETED を消す(ID1,ID2)。前後が同じだったら一つにする(ID2)。先頭はそのまま(ID3)。
+#BEFORE: ID1 20220129,105,1 20220128,[DELETED] 20211226,209,2 20211212,105,1
+#AFTER : ID1 20220129,105,1 20211226,209,2 20211212,105,1
+#BEFORE: ID2 20220129,660,7 20220128,[DELETED] 20220107,660,7 20211219,99,1
+#AFTER : ID2 20220107,660,7 20211219,99,1
+#BEFORE: ID3 20220128,[DELETED] 20211219,99,1
+#AFTER : ID3 20220128,[DELETED] 20211219,99,1
+sub delete_deleted {
+    my ($l_r) = @_;
+    return $l_r if not grep {$_->[1] =~ /\Q$deleted_label\E/} @$l_r[1..$#$l_r];
+    my @new_list;
+    for (my $i = $#$l_r; 0 <= $i; $i--) {
+	if ($i != 0 and $l_r->[$i][1] =~ /\Q$deleted_label\E/) {
+	    $i-- if $l_r->[$i-1][1] eq $l_r->[$i+1][1];
+	    next;
+	}
+	unshift @new_list, $l_r->[$i];
+    }
+    return \@new_list;
 }
