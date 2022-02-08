@@ -11,7 +11,7 @@
 ```
 -i FILENAME, -input FILENAME : アップデート用に読み込むログファイルを1つ指定 (update mode)
 -d FILENAME, -db FILENAME : アップデートするDBファイルを指定 (update mode)
--D : 途中にある DELETED の削除を行う
+-D, -delete : 途中にある DELETED の削除を行う
 -l STRING, -label STRING : DELETED のラベル文字列を指定する (default は "[DELETED]")
 ```
 詳細は後述。

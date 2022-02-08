@@ -6,7 +6,7 @@ use utf8;
 use open ":utf8";
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
-use Getopt::Long qw(:config no_ignore_case);
+use Getopt::Long qw(:config posix_default no_ignore_case gnu_compat);
 $| = 1;
 
 my $db_fn = ""; # DB file name (for update mode)
@@ -14,10 +14,10 @@ my $input_fn = ""; # latest log file name (for update mode)
 my $delete_on; # delete deleted nodes
 my $deleted_label = "[DELETED]";
 GetOptions(
-    'db=s' => \$db_fn,
-    'input=s' => \$input_fn,
-    'D' => \$delete_on,
-    'label=s' => \$deleted_label,
+    'db|d=s' => \$db_fn,
+    'input|i=s' => \$input_fn,
+    'delete|D' => \$delete_on,
+    'label|l=s' => \$deleted_label,
     );
 
 my %dat;
