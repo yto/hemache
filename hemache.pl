@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 use strict;
 use warnings;
+use List::Util qw(reduce);
 use utf8;
 use open ":utf8";
 binmode STDIN, ":utf8";
@@ -23,22 +24,22 @@ GetOptions(
 my %dat;
 my @log_file_list;
 if ($input_fn and $db_fn) { # update DB
-    read_db_file(\%dat, $db_fn);
     add_to_log_file_list(\@log_file_list, $input_fn);
+    read_log_file(\%dat, $log_file_list[0]);
+    read_db_file_and_update_db_and_output(\%dat, $db_fn);
 } else { # build DB
     while (<>) { # read log file name list
 	chomp;
-	add_to_log_file_list(\@log_file_list, $_);
+	add_to_log_file_list(\@log_file_list, $_) if -s $_;
     }
-}
-
-foreach my $fni (sort {$a->{'ymdh'} <=> $b->{'ymdh'}} @log_file_list) {
-    read_log_file_and_update_db(\%dat, $fni);
-}
-
-foreach my $id (sort keys %dat) {
-    my $l_r = $delete_on ? delete_deleted($dat{$id}{list}) : $dat{$id}{list};
-    print join("\t", $id, map {join(",", @$_)} @$l_r)."\n";
+    foreach my $fni (sort {$a->{'ymdh'} <=> $b->{'ymdh'}} @log_file_list) {
+	read_log_file_and_update_db(\%dat, $fni);
+    }
+    #warn "read and up done";
+    foreach my $id (sort keys %dat) {
+	delete_deleted($dat{$id}{list}) if $delete_on;
+	print join("\t", $id, map {join(",", @$_)} @{$dat{$id}{list}})."\n";
+    }
 }
 
 exit;
@@ -50,16 +51,45 @@ sub add_to_log_file_list {
     push @$l_r, {'ymdh' => $1, 'fn' => $fn};
 }
 
-sub read_db_file {
-    my ($dat_r, $fn) = @_;
-    my $fh = open_file($fn);
+sub read_log_file {
+    my ($dat_r, $fni) = @_;
+    my $fh = open_file($fni->{"fn"});
     while (<$fh>) {
 	chomp;
 	next if /^\s*$/ or /^\#/;
-	my ($id, @cols) = split(/\t/, $_);
-	$dat_r->{$id}{list} = [map {/^(\d+),(.*)$/; [$1, $2]} @cols];
+	my ($id, $cont) = split(/\t/, $_);
+	$dat_r->{$id} = [$fni->{"ymdh"}, $cont];
+	#warn "new> $." if $. % 10000 == 0;
     }
     close($fh);
+}
+
+sub read_db_file_and_update_db_and_output {
+    my ($dat_r, $fn) = @_;
+    my $fh = open_file($fn);
+    my $ymdh = $dat_r->{(keys %$dat_r)[0]}[0];
+    my %seen;
+    while (<$fh>) { # DBファイルを一行ずつ読み込んで処理
+	chomp;
+	next if /^\s*$/ or /^\#/;
+	my ($id, @cols) = split(/\t/, $_);
+	my @hist = map {/^(\d+),(.*)$/; [$1, $2]} @cols;
+	sort_and_redup(\@hist);
+	if (defined $dat_r->{$id}) { # 追加 or スルー
+	    add_one(\@hist, [$ymdh, $dat_r->{$id}[1]]);
+	} else { # 今回のログから消えてる場合の処理
+	    add_one(\@hist, [$ymdh, $deleted_label]);
+	}
+	delete_deleted(\@hist) if $delete_on;
+	print join("\t", $id, map {join(",", @$_)} @hist)."\n";
+	#warn "db> $." if $. % 10000 == 0;
+	$seen{$id} = 1;
+    }
+    close($fh);
+    # 新規
+    foreach my $id (grep {!$seen{$_}} keys %$dat_r) {
+	print join("\t", $id, map {join(",", @$_)} ([$ymdh, $dat_r->{$id}[1]]))."\n";
+    }
 }
 
 sub read_log_file_and_update_db {
@@ -70,12 +100,15 @@ sub read_log_file_and_update_db {
 	chomp;
 	next if /^\s*$/ or /^\#/;
 	my ($id, $cont) = split(/\t/, $_);
-	add_one(\%{$dat_r->{$id}}, [$fni->{"ymdh"}, $cont]);
+	@{$dat_r->{$id}{list}} = () if not defined $dat_r->{$id}{list};
+	add_one($dat_r->{$id}{list}, [$fni->{"ymdh"}, $cont]);
 	$seen{$id} = 1;
+	#warn "up> $." if $. % 10000 == 0;
     }
     close($fh);
+    #warn "read done";
     # ファイルから消えたIDの処理
-    add_one($dat_r->{$_}, [$fni->{"ymdh"}, $deleted_label]) for grep {!$seen{$_}} keys %$dat_r;
+    add_one($dat_r->{$_}{list}, [$fni->{"ymdh"}, $deleted_label]) for grep {!$seen{$_}} keys %$dat_r;
 }
 
 sub open_file {
@@ -92,24 +125,30 @@ sub open_file {
 sub add_one {
     my ($d_r, $r) = @_;
     my ($ymdh, $cont) = @$r;
-    if (not defined $d_r->{list}) { # 一番最初は追加
-	@{$d_r->{list}} = ([$ymdh, $cont]);
-    } elsif ($cont ne $d_r->{list}[0][1]) { # 前のと異なる場合は追加
-	unshift @{$d_r->{list}}, [$ymdh, $cont];
+    if (not @$d_r) { # 一番最初は追加
+	@$d_r = ([$ymdh, $cont]);
+    } elsif ($cont ne $d_r->[0][1]) { # 前のと異なる場合
+	if ($ymdh eq $d_r->[0][0]) { # 日付が同じ場合は上書き
+	    $d_r->[0][1] = $cont;
+	} else { # そうでない場合は普通に追加
+	    unshift @$d_r, [$ymdh, $cont];
+	}
     }
+}
+
+sub sort_and_redup {
+    my ($l_r) = @_;
+    my @list = sort {$b->[0] cmp $a->[0]} @$l_r;
+    @$l_r = @{(reduce {!$a ? [$b] : do {pop @$a if $a->[-1][1] eq $b->[1]; [@$a, $b]}} undef, @list)};
+    return;
 }
 
 # 途中にある DELETED を消す
 sub delete_deleted {
     my ($l_r) = @_;
-    return $l_r if not grep {$_->[1] =~ /\Q$deleted_label\E/} @$l_r[1..$#$l_r];
-    my @new_list;
-    for (my $i = $#$l_r; 0 <= $i; $i--) {
-	if ($i != 0 and $l_r->[$i][1] =~ /\Q$deleted_label\E/) {
-	    $i-- if $l_r->[$i-1][1] eq $l_r->[$i+1][1];
-	    next;
-	}
-	unshift @new_list, $l_r->[$i];
-    }
-    return \@new_list;
+    return if @$l_r <= 2;
+    my @new_list = ($l_r->[0], grep {$_->[1] !~ /\Q$deleted_label\E/} @$l_r[1..$#$l_r]);
+    return if @$l_r == @new_list;
+    sort_and_redup(\@new_list);
+    @$l_r = @new_list;
 }

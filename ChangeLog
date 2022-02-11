@@ -1,3 +1,14 @@
+2022-02-11  YAMASHITA Tatsuo  <yto@example.com>
+
+	* hemache.pl: いろいろといじる。
+	追加時にメモリを極力使わないようにする。
+	redup の処理追加。
+	など
+
+2022-02-09  YAMASHITA Tatsuo  <yto@example.com>
+
+	* hemache.pl (add_one): 追加時に、日付が同じ場合は上書きで済ます。
+
 2022-02-07  YAMASHITA Tatsuo  <yto@example.com>
 
 	* hemache.pl: delete interval "deleted" nodes.
