@@ -1,3 +1,7 @@
+2022-04-09  YAMASHITA Tatsuo  <yto@example.com>
+
+	* hemache.pl (add_to_log_file_list): ファイル名のフォーマットを緩和。
+
 2022-02-11  YAMASHITA Tatsuo  <yto@example.com>
 
 	* hemache.pl: いろいろといじる。

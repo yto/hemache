@@ -47,7 +47,7 @@ exit;
 sub add_to_log_file_list {
     my ($l_r, $fn) = @_;
     die "bad file [$fn]" if not -f $fn;
-    die "file name error [$fn]" if not $fn =~ m{/(\d{10}|\d{8})[^/]+$};
+    die "file name error [$fn]" if not $fn =~ m{\D(\d{10}|\d{8})[^/]+$};
     push @$l_r, {'ymdh' => $1, 'fn' => $fn};
 }
 
