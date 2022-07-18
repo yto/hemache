@@ -27,6 +27,8 @@ if ($input_fn and $db_fn) { # update DB
     add_to_log_file_list(\@log_file_list, $input_fn);
     read_log_file(\%dat, $log_file_list[0]);
     read_db_file_and_update_db_and_output(\%dat, $db_fn);
+} elsif ($db_fn) { # clean DB
+    read_db_file_and_update_db_and_output({}, $db_fn);
 } else { # build DB
     while (<>) { # read log file name list
 	chomp;
@@ -67,7 +69,7 @@ sub read_log_file {
 sub read_db_file_and_update_db_and_output {
     my ($dat_r, $fn) = @_;
     my $fh = open_file($fn);
-    my $ymdh = $dat_r->{(keys %$dat_r)[0]}[0];
+    my $ymdh = %$dat_r ? $dat_r->{(keys %$dat_r)[0]}[0] : "";
     my %seen;
     while (<$fh>) { # DBファイルを一行ずつ読み込んで処理
 	chomp;
@@ -75,10 +77,12 @@ sub read_db_file_and_update_db_and_output {
 	my ($id, @cols) = split(/\t/, $_);
 	my @hist = map {/^(\d+),(.*)$/; [$1, $2]} @cols;
 	sort_and_redup(\@hist);
-	if (defined $dat_r->{$id}) { # 追加 or スルー
-	    add_one(\@hist, [$ymdh, $dat_r->{$id}[1]]);
-	} else { # 今回のログから消えてる場合の処理
-	    add_one(\@hist, [$ymdh, $deleted_label]);
+	if (%$dat_r) { # 追加データがあるときの処理
+	    if (defined $dat_r->{$id}) { # 追加 or スルー
+		add_one(\@hist, [$ymdh, $dat_r->{$id}[1]]);
+	    } else { # 今回のログから消えてる場合の処理
+		add_one(\@hist, [$ymdh, $deleted_label]);
+	    }
 	}
 	delete_deleted(\@hist) if $delete_on;
 	print join("\t", $id, map {join(",", @$_)} @hist)."\n";
@@ -86,6 +90,7 @@ sub read_db_file_and_update_db_and_output {
 	$seen{$id} = 1;
     }
     close($fh);
+    return if !%$dat_r;
     # 新規
     foreach my $id (grep {!$seen{$_}} keys %$dat_r) {
 	print join("\t", $id, map {join(",", @$_)} ([$ymdh, $dat_r->{$id}[1]]))."\n";

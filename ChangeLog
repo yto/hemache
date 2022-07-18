@@ -1,3 +1,8 @@
+2022-07-18  YAMASHITA Tatsuo  <yto@example.com>
+
+	* hemache.pl (read_db_file_and_update_db_and_output): 追加ファイル（追加データ）が空の場合、DBファイルだけに処理を行う。
+	データクリーニング用途。
+
 2022-04-09  YAMASHITA Tatsuo  <yto@example.com>
 
 	* hemache.pl (add_to_log_file_list): ファイル名のフォーマットを緩和。

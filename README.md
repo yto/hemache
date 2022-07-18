@@ -20,12 +20,16 @@
 
 - build mode:
   - ファイル群からDBファイルを作る。
-  - 入力: ファイル名リスト (stdin)
-  - 出力: DBファイル (stdout)
+  - 入力: ファイル名リスト(stdin)
+  - 出力: DBファイル(stdout)
 - update mode:
   - ログファイル1つを読み込み、DBファイルをアップデートする。
   - 入力: ログファイル("-i"), DBファイル("-d")
-  - 出力: DBファイル (stdout)
+  - 出力: DBファイル(stdout)
+- clearn mode:
+  - DBファイルを読み込み dedup などのクリーニングを行う。
+  - 入力: DBファイル("-d")
+  - 出力: DBファイル(stdout)
 
 build mode:
 ```
