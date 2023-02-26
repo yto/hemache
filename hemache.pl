@@ -143,7 +143,8 @@ sub add_one {
 
 sub sort_and_redup {
     my ($l_r) = @_;
-    my @list = sort {$b->[0] cmp $a->[0]} @$l_r;
+    my %seen;
+    my @list = grep {!$seen{$_->[0]}++} sort {$b->[0] cmp $a->[0]} @$l_r;
     @$l_r = @{(reduce {!$a ? [$b] : do {pop @$a if $a->[-1][1] eq $b->[1]; [@$a, $b]}} undef, @list)};
     return;
 }
