@@ -39,7 +39,10 @@ if ($input_fn and $db_fn) { # update DB
     }
     #warn "read and up done";
     foreach my $id (sort keys %dat) {
-	delete_deleted($dat{$id}{list}) if $delete_on;
+	if ($delete_on) {
+	    delete_deleted($dat{$id}{list});
+	    sort_and_dedup($dat{$id}{list});
+	}
 	print join("\t", $id, map {join(",", @$_)} @{$dat{$id}{list}})."\n";
     }
 }
@@ -76,7 +79,7 @@ sub read_db_file_and_update_db_and_output {
 	next if /^\s*$/ or /^\#/;
 	my ($id, @cols) = split(/\t/, $_);
 	my @hist = map {/^(\d+),(.*)$/; [$1, $2]} @cols;
-	sort_and_redup(\@hist);
+	sort_and_dedup(\@hist);
 	if (%$dat_r) { # 追加データがあるときの処理
 	    if (defined $dat_r->{$id}) { # 追加 or スルー
 		add_one(\@hist, [$ymdh, $dat_r->{$id}[1]]);
@@ -84,7 +87,10 @@ sub read_db_file_and_update_db_and_output {
 		add_one(\@hist, [$ymdh, $deleted_label]);
 	    }
 	}
-	delete_deleted(\@hist) if $delete_on;
+	if ($delete_on) {
+	    delete_deleted(\@hist);
+	    sort_and_dedup(\@hist);
+	}
 	print join("\t", $id, map {join(",", @$_)} @hist)."\n";
 	#warn "db> $." if $. % 10000 == 0;
 	$seen{$id} = 1;
@@ -141,7 +147,7 @@ sub add_one {
     }
 }
 
-sub sort_and_redup {
+sub sort_and_dedup {
     my ($l_r) = @_;
     my %seen;
     my @list = grep {!$seen{$_->[0]}++} sort {$b->[0] cmp $a->[0]} @$l_r;
@@ -155,6 +161,5 @@ sub delete_deleted {
     return if @$l_r <= 2;
     my @new_list = ($l_r->[0], grep {$_->[1] !~ /\Q$deleted_label\E/} @$l_r[1..$#$l_r]);
     return if @$l_r == @new_list;
-    sort_and_redup(\@new_list);
     @$l_r = @new_list;
 }

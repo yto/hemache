@@ -1,3 +1,9 @@
+2023-09-21  Tatsuwo  <yto at example.com>
+
+	* hm-sort-dedup.pl: sort, dedup, 途中delete消しのみを on the fly で行うやつ。
+
+	* hemache.pl: typo redup => dedup
+
 2023-02-26  YAMASHITA Tatsuo  <yto@example.com>
 
 	* hemache.pl (sort_and_redup): redup修正。ラベルが同じ場合は先にあるものを残す。
