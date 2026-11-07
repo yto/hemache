@@ -1,3 +1,10 @@
+2026-11-07  Claude Code  <noreply at anthropic.com>
+
+	* Makefile: 新規。"make install" で hemache.pl と hm-sort-dedup.pl を
+	$(PREFIX)/bin (既定は /usr/local) に入れる。DESTDIR と "make uninstall" も使える。
+
+	* README.md: インストールの節を足した。
+
 2023-09-21  Tatsuwo  <yto at example.com>
 
 	* hm-sort-dedup.pl: sort, dedup, 途中delete消しのみを on the fly で行うやつ。

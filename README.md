@@ -6,6 +6,19 @@
 - 複数のログファイルを一気に読み込んで変化のあった日時（or 日付）だけをまとめた TSV ファイル（DBファイル）を作る (build mode)。
 - 新たなログファイルでDBファイルのアップデートができる (update mode)。
 
+## インストール
+
+`make install` で `hemache.pl` と `hm-sort-dedup.pl` を `/usr/local/bin` に入れる。
+入れる先は `PREFIX` で変えられる。
+```
+% make install                # /usr/local/bin に入れる
+% make install PREFIX=$HOME   # $HOME/bin に入れる
+% make uninstall PREFIX=$HOME # 消す
+```
+パッケージを作るときは `DESTDIR` も使える（`make install DESTDIR=/tmp/stage PREFIX=/usr/local`）。
+
+インストールせずに、このディレクトリのスクリプトをそのまま実行してもよい。
+
 ## Options
 
 ```
